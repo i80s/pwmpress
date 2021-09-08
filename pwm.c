@@ -24,17 +24,19 @@ static unsigned hold_ms = 1000;
 
 static int write_to_file(const char *file, const char *str)
 {
-	FILE *fp;
-	if ((fp = fopen(file, "w")) == NULL) {
-		fprintf(stderr, "*** fopen('%s'): %s.\n", file, strerror(errno));
+	int fd;
+
+	if ((fd = open(file, O_WRONLY)) < 0) {
+		fprintf(stderr, "*** open('%s'): %s.\n", file, strerror(errno));
 		return -1;
 	}
-	if (fwrite(str, 1, strlen(str), fp) == 0) {
-		fprintf(stderr, "*** fwrite('%s', '%s'): %s.\n", file, str, strerror(errno));
-		fclose(fp);
+	if (write(fd, str, strlen(str)) < 0) {
+		fprintf(stderr, "*** write('%s', '%s'): %s.\n", file, str, strerror(errno));
+		close(fd);
 		return -1;
 	}
-	fclose(fp);
+	close(fd);
+
 	return 0;
 }
 
@@ -97,7 +99,6 @@ int main(int argc, char *argv[])
 	}
 
 	sprintf(the_path, "/sys/class/gpio/gpio%u/direction", gpio_no);
-
 	/* Initialize the GPIO */
 	if (stat(the_path, &sb) != 0) {
 		sprintf(the_data, "%u\n", gpio_no);
