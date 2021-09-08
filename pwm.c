@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
 	/* Operate the values */
 	sprintf(the_path, "/sys/class/gpio/gpio%u/value", gpio_no);
 	pwm_gpio(the_path, 500*1000, 20000, 2500);
-	usleep(hold_ms*1000*1000);
+	usleep(hold_ms*1000);
 	pwm_gpio(the_path, 500*1000, 20000, 1500);
 
 	return 0;
