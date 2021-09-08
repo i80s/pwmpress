@@ -8,9 +8,9 @@ CC ?= gcc
 CFLAGS += -Wall
 HEADERS =
 
-pwm: pwm.c
+pwmpress: pwmpress.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ -DDEFAULT_GPIO=7
 
 clean:
-	rm -f pwm *.o
+	rm -f pwmpress *.o
 
