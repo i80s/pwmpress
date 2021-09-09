@@ -119,9 +119,9 @@ int main(int argc, char *argv[])
 
 	/* Operate the values */
 	sprintf(the_path, "/sys/class/gpio/gpio%u/value", gpio_no);
-	pwm_gpio(the_path, operate_ms*1000, 20000, 2500); /* 50Hz, 占空2.5ms, 持续0.5s */
+	pwm_gpio(the_path, operate_ms*1000, 20000, 2000); /* 信号周期20ms, 占空2.0ms */
 	usleep(hold_ms*1000); /* 按压XXms */
-	pwm_gpio(the_path, operate_ms*1000, 20000, 1500); /* 50Hz, 占空1.5ms, 持续0.5s */
+	pwm_gpio(the_path, operate_ms*1000, 20000, 1000); /* 信号周期20ms, 占空1.0ms */
 
 	return 0;
 }
