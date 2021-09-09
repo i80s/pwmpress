@@ -1,7 +1,7 @@
-/*
- * Copyright (c) 2021 Justin Liu
- * Author: Justin Liu <rssnsj@gmail.com>
- * https://github.com/rssnsj/
+/**
+ * Copyright (c) 2021 i80s
+ * Author: i80s
+ * https://github.com/i80s/
  */
 
 #include <stdio.h>
