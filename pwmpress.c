@@ -121,11 +121,11 @@ int main(int argc, char *argv[])
 
 	/* Operate the values */
 	sprintf(the_path, "/sys/class/gpio/gpio%u/value", gpio_no);
-	pwm_gpio(the_path, operate_ms*600, 20000, 1000, 2000); /* 信号周期20ms, 占空1~2ms */
-	pwm_gpio(the_path, operate_ms*400, 20000, 2000, 2000);
+	pwm_gpio(the_path, operate_ms*400, 20000, 1000, 2000); /* 信号周期20ms, 占空1~2ms */
+	pwm_gpio(the_path, operate_ms*600, 20000, 2000, 2000);
 	usleep(hold_ms*1000); /* 按压XXms */
-	pwm_gpio(the_path, operate_ms*600, 20000, 2000, 1000); /* 信号周期20ms, 占空2~1ms */
-	pwm_gpio(the_path, operate_ms*400, 20000, 1000, 1000);
+	pwm_gpio(the_path, operate_ms*400, 20000, 2000, 1000); /* 信号周期20ms, 占空2~1ms */
+	pwm_gpio(the_path, operate_ms*600, 20000, 1000, 1000);
 
 	return 0;
 }
