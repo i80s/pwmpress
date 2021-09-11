@@ -20,7 +20,7 @@
 #endif
 
 static unsigned gpio_no = DEFAULT_GPIO;
-static unsigned operate_ms = 400;
+static unsigned operate_ms = 500;
 static unsigned hold_ms = 500;
 
 static int write_to_file(const char *file, const char *str)
@@ -47,7 +47,8 @@ static int write_to_file(const char *file, const char *str)
  *  $cycle_us: 信号周期时长 (频率的倒数, 微秒)
  *  $duty_us: 占空时长 (信号周期内高电平的的时长, 微秒)
  */
-static void pwm_gpio(const char *file, unsigned operate_us, unsigned cycle_us, unsigned duty_us)
+static void pwm_gpio(const char *file, int operate_us, int cycle_us,
+		int duty_us_1, int duty_us_2)
 {
 	int fd, i;
 
@@ -58,6 +59,7 @@ static void pwm_gpio(const char *file, unsigned operate_us, unsigned cycle_us, u
 
 	for (i = 0; i < operate_us / cycle_us; i++) {
 		char buf[20];
+		int duty_us = duty_us_1 + (duty_us_2 - duty_us_1) * i / (operate_us / cycle_us);
 
 		/* 输出高电平 */
 		sprintf(buf, "1\n");
@@ -119,9 +121,11 @@ int main(int argc, char *argv[])
 
 	/* Operate the values */
 	sprintf(the_path, "/sys/class/gpio/gpio%u/value", gpio_no);
-	pwm_gpio(the_path, operate_ms*1000, 20000, 2000); /* 信号周期20ms, 占空2.0ms */
+	pwm_gpio(the_path, operate_ms*600, 20000, 1000, 2000); /* 信号周期20ms, 占空1~2ms */
+	pwm_gpio(the_path, operate_ms*400, 20000, 2000, 2000);
 	usleep(hold_ms*1000); /* 按压XXms */
-	pwm_gpio(the_path, operate_ms*1000, 20000, 1000); /* 信号周期20ms, 占空1.0ms */
+	pwm_gpio(the_path, operate_ms*600, 20000, 2000, 1000); /* 信号周期20ms, 占空2~1ms */
+	pwm_gpio(the_path, operate_ms*400, 20000, 1000, 1000);
 
 	return 0;
 }
