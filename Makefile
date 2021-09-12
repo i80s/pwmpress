@@ -8,8 +8,12 @@ CC ?= gcc
 CFLAGS += -Wall
 HEADERS =
 
+ifneq ($(N),)
+  CFLAGS += -DDEFAULT_GPIO=$(N)
+endif
+
 pwmpress: pwmpress.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ -DDEFAULT_GPIO=7
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 clean:
 	rm -f pwmpress *.o
