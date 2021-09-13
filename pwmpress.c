@@ -20,8 +20,10 @@
 #endif
 
 static unsigned gpio_no = DEFAULT_GPIO;
-static unsigned operate_ms = 500;
-static unsigned hold_ms = 500;
+static const unsigned pwm_cycle_us = 20*1000; /* 信号周期20ms (频率50Hz的倒数) */
+static const unsigned pwm_move_us = 200*1000; /* 信号渐变200ms */
+static const unsigned pwm_keep_us = 300*1000; /* 信号保持300ms */
+static unsigned key_hold_ms = 500; /* 按键保持时间 (ms) */
 
 static int write_to_file(const char *file, const char *str)
 {
@@ -43,12 +45,11 @@ static int write_to_file(const char *file, const char *str)
 
 /**
  * 参数含义:
- *  $operate_us: 信号持续时长 (微秒)
- *  $cycle_us: 信号周期时长 (频率的倒数, 微秒)
- *  $duty_us: 占空时长 (信号周期内高电平的的时长, 微秒)
+ *  $signal_us: 信号作用时长 (微秒)
+ *  $duty_us_1: 起始时的占空时长 (信号周期内高电平的的时长, 微秒)
+ *  $duty_us_2: 起始时的占空时长
  */
-static void pwm_gpio(const char *file, int operate_us, int cycle_us,
-		int duty_us_1, int duty_us_2)
+static void pwm_gpio(const char *file, unsigned signal_us, unsigned duty_us_1, unsigned duty_us_2)
 {
 	int fd, i;
 
@@ -57,9 +58,9 @@ static void pwm_gpio(const char *file, int operate_us, int cycle_us,
 		return;
 	}
 
-	for (i = 0; i < operate_us / cycle_us; i++) {
+	for (i = 0; i < signal_us / pwm_cycle_us; i++) {
+		int duty_us = (int)duty_us_1 + (int)(duty_us_2 - duty_us_1) * i / (int)(signal_us / pwm_cycle_us);
 		char buf[20];
-		int duty_us = duty_us_1 + (duty_us_2 - duty_us_1) * i / (operate_us / cycle_us);
 
 		/* 输出高电平 */
 		sprintf(buf, "1\n");
@@ -69,7 +70,7 @@ static void pwm_gpio(const char *file, int operate_us, int cycle_us,
 		/* 输出低电平 */
 		sprintf(buf, "0\n");
 		write(fd, buf, strlen(buf));
-		usleep(cycle_us - duty_us);
+		usleep(pwm_cycle_us - duty_us);
 	}
 
 	close(fd);
@@ -77,11 +78,11 @@ static void pwm_gpio(const char *file, int operate_us, int cycle_us,
 
 static void print_help(int argc, char *argv[])
 {
-	printf("GPIO relay control CLI.\n");
+	printf("PWM key press CLI.\n");
 	printf("Usage:\n");
 	printf("  %s [options]\n", argv[0]);
 	printf("  -d <gpio>           GPIO ID (default: %u)\n", gpio_no);
-	printf("  -t <msec>           delayed time in ms (default: %u)\n", hold_ms);
+	printf("  -t <msec>           delayed time in ms (default: %u)\n", key_hold_ms);
 	printf("  -h                  print this help\n");
 }
 
@@ -97,7 +98,7 @@ int main(int argc, char *argv[])
 			gpio_no = strtoul(optarg, NULL, 10);
 			break;
 		case 't':
-			hold_ms = strtoul(optarg, NULL, 10);
+			key_hold_ms = strtoul(optarg, NULL, 10);
 			break;
 		case 'h':
 			print_help(argc, argv);
@@ -121,11 +122,11 @@ int main(int argc, char *argv[])
 
 	/* Operate the values */
 	sprintf(the_path, "/sys/class/gpio/gpio%u/value", gpio_no);
-	pwm_gpio(the_path, operate_ms*400, 20000, 1000, 2000); /* 信号周期20ms, 占空1~2ms */
-	pwm_gpio(the_path, operate_ms*600, 20000, 2000, 2000);
-	usleep(hold_ms*1000); /* 按压XXms */
-	pwm_gpio(the_path, operate_ms*400, 20000, 2000, 1000); /* 信号周期20ms, 占空2~1ms */
-	pwm_gpio(the_path, operate_ms*600, 20000, 1000, 1000);
+	pwm_gpio(the_path, pwm_move_us, 1000, 2000); /* 信号渐变, 占空1~2ms */
+	pwm_gpio(the_path, pwm_keep_us, 2000, 2000); /* 信号保持 */
+	usleep(key_hold_ms*1000); /* 按压XXms */
+	pwm_gpio(the_path, pwm_move_us, 2000, 1000); /* 信号渐变, 占空2~1ms */
+	pwm_gpio(the_path, pwm_keep_us, 1000, 1000); /* 信号保持 */
 
 	return 0;
 }
