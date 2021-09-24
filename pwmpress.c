@@ -45,11 +45,11 @@ static int write_to_file(const char *file, const char *str)
 
 /**
  * 参数含义:
- *  $signal_us: 信号作用时长 (微秒)
  *  $duty_us_1: 起始时的占空时长 (信号周期内高电平的的时长, 微秒)
  *  $duty_us_2: 起始时的占空时长
+ *  $signal_us: 信号作用时长 (微秒)
  */
-static void pwm_gpio(const char *file, unsigned signal_us, unsigned duty_us_1, unsigned duty_us_2)
+static void pwm_gpio(const char *file, unsigned duty_us_1, unsigned duty_us_2, unsigned signal_us)
 {
 	int fd, i;
 
@@ -122,11 +122,10 @@ int main(int argc, char *argv[])
 
 	/* Operate the values */
 	sprintf(the_path, "/sys/class/gpio/gpio%u/value", gpio_no);
-	pwm_gpio(the_path, pwm_move_us, 1000, 2000); /* 信号渐变, 占空1~2ms */
-	pwm_gpio(the_path, pwm_keep_us, 2000, 2000); /* 信号保持 */
-	usleep(key_hold_ms*1000); /* 按压XXms */
-	pwm_gpio(the_path, pwm_move_us, 2000, 1000); /* 信号渐变, 占空2~1ms */
-	pwm_gpio(the_path, pwm_keep_us, 1000, 1000); /* 信号保持 */
+	pwm_gpio(the_path, 1000, 2000, pwm_move_us); /* 信号渐变, 占空1~2ms */
+	pwm_gpio(the_path, 2000, 2000, pwm_keep_us + key_hold_ms*1000); /* 信号保持 + 按压时间 */
+	pwm_gpio(the_path, 2000, 1000, pwm_move_us); /* 信号渐变, 占空2~1ms */
+	pwm_gpio(the_path, 1000, 1000, pwm_keep_us); /* 信号保持 */
 
 	return 0;
 }
