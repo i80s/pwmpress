@@ -9,21 +9,62 @@
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <time.h>
 #include <ctype.h>
+#include <sys/time.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <errno.h>
 
 #ifndef DEFAULT_GPIO
-	#define DEFAULT_GPIO 7
+	#define DEFAULT_GPIO 27
 #endif
 
 static unsigned gpio_no = DEFAULT_GPIO;
-static const unsigned pwm_cycle_us = 20*1000; /* 信号周期20ms (频率50Hz的倒数) */
-static const unsigned pwm_move_us = 200*1000; /* 信号渐变200ms */
-static const unsigned pwm_keep_us = 300*1000; /* 信号保持300ms */
-static unsigned key_hold_ms = 500; /* 按键保持时间 (ms) */
+
+static const unsigned pwm_cycle_us = 20 * 1000; /* 信号周期20ms (频率50Hz的倒数) */
+
+static const unsigned pwm_duty1_us =  700;
+static const unsigned pwm_duty2_us = 2000;
+
+static const unsigned pwm_move_us  = 200 * 1000; /* 信号渐变 */
+static const unsigned pwm_keep_us  = 100 * 1000; /* 信号保持 */
+
+static unsigned key_hold_ms = 200; /* 按键保持时间 (ms) */
+
+/**
+ * Functions delayMicrosecondsHard, delayMicroseconds are copyied from:
+ *  https://github.com/WiringPi/WiringPi/blob/master/wiringPi/wiringPi.c
+ */
+void delayMicrosecondsHard(unsigned int howLong)
+{
+	struct timeval tNow, tLong, tEnd ;
+
+	gettimeofday (&tNow, NULL) ;
+	tLong.tv_sec  = howLong / 1000000 ;
+	tLong.tv_usec = howLong % 1000000 ;
+	timeradd(&tNow, &tLong, &tEnd) ;
+
+	while (timercmp (&tNow, &tEnd, <))
+		gettimeofday (&tNow, NULL) ;
+}
+void delayMicroseconds(unsigned int howLong)
+{
+	struct timespec sleeper ;
+	unsigned int uSecs = howLong % 1000000 ;
+	unsigned int wSecs = howLong / 1000000 ;
+
+	if (howLong == 0) {
+		return ;
+	} else if (howLong < 100) {
+		delayMicrosecondsHard (howLong) ;
+	} else {
+		sleeper.tv_sec  = wSecs ;
+		sleeper.tv_nsec = (long)(uSecs * 1000L) ;
+		nanosleep(&sleeper, NULL) ;
+	}
+}
 
 static int write_to_file(const char *file, const char *str)
 {
@@ -46,7 +87,7 @@ static int write_to_file(const char *file, const char *str)
 /**
  * 参数含义:
  *  $duty_us_1: 起始时的占空时长 (信号周期内高电平的的时长, 微秒)
- *  $duty_us_2: 起始时的占空时长
+ *  $duty_us_2: 结束时的占空时长
  *  $signal_us: 信号作用时长 (微秒)
  */
 static void pwm_gpio(const char *file, unsigned duty_us_1, unsigned duty_us_2, unsigned signal_us)
@@ -65,12 +106,12 @@ static void pwm_gpio(const char *file, unsigned duty_us_1, unsigned duty_us_2, u
 		/* 输出高电平 */
 		sprintf(buf, "1\n");
 		write(fd, buf, strlen(buf));
-		usleep(duty_us);
+		delayMicrosecondsHard(duty_us);
 
 		/* 输出低电平 */
 		sprintf(buf, "0\n");
 		write(fd, buf, strlen(buf));
-		usleep(pwm_cycle_us - duty_us);
+		delayMicrosecondsHard(pwm_cycle_us - duty_us);
 	}
 
 	close(fd);
@@ -122,10 +163,10 @@ int main(int argc, char *argv[])
 
 	/* Operate the values */
 	sprintf(the_path, "/sys/class/gpio/gpio%u/value", gpio_no);
-	pwm_gpio(the_path, 1000, 2000, pwm_move_us); /* 信号渐变, 占空1~2ms */
-	pwm_gpio(the_path, 2000, 2000, pwm_keep_us + key_hold_ms*1000); /* 信号保持 + 按压时间 */
-	pwm_gpio(the_path, 2000, 1000, pwm_move_us); /* 信号渐变, 占空2~1ms */
-	pwm_gpio(the_path, 1000, 1000, pwm_keep_us); /* 信号保持 */
+	pwm_gpio(the_path, pwm_duty1_us, pwm_duty2_us, pwm_move_us); /* 信号渐变(1->2) */
+	pwm_gpio(the_path, pwm_duty2_us, pwm_duty2_us, pwm_keep_us + key_hold_ms*1000); /* 信号保持(2) + 按压时间 */
+	pwm_gpio(the_path, pwm_duty2_us, pwm_duty1_us, pwm_move_us); /* 信号渐变(2->1) */
+	pwm_gpio(the_path, pwm_duty1_us, pwm_duty1_us, pwm_keep_us); /* 信号保持(1) */
 
 	return 0;
 }
